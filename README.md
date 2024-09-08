@@ -1,13 +1,13 @@
-# Caddy Mysql Config Adapter
+# Caddy Postgres Config Adapter
 
 This is a [config adapter](https://caddyserver.com/docs/config-adapters) for Caddy which Store And Update Configuration.
 
 - This project is not complete, and we are asking the community to help finish its development.
 
-Currently supported key in mysql table:
+Currently supported key in postgres table:
 
-- verison
-- config (now all the configuration is in config key, should be seperate to others in future,welcome to create Pull Request https://caddyserver.com/docs/json/ https://caddyserver.com/docs/caddyfile/options)
+- version
+- config (now all the configuration is in config key, should be separate to others in the future,welcome to create Pull Request https://caddyserver.com/docs/json/ https://caddyserver.com/docs/caddyfile/options)
 
 Thank you, and we hope you have fun with it!
 
@@ -22,7 +22,7 @@ $ go get -u github.com/caddyserver/xcaddy/cmd/xcaddy
 Then build Caddy with this Go module plugged in. For example:
 
 ```shell
-$ xcaddy build --with github.com/zhangjiayin/caddy-mysql-adapter
+$ xcaddy build --with github.com/fresent/caddy-postgres-adapter
 ```
 
 ## Use
@@ -33,24 +33,29 @@ Using this config adapter is the same as all the other config adapters.
 - You can adapt your config with the [`adapt` command](https://caddyserver.com/docs/command-line#caddy-adapt)
 
 ```
-caddy run --adapter mysql --config ./mysql.json
+caddy run --adapter postgres --config ./postgres.json
 ```
 
-- mysql.json
+- postgres.json
 
 ```
 {
-  "dsn": "caddy_user:caddy_password@tcp(127.0.0.1:3306)/caddy?charset=utf8mb4",  //ref: https://github.com/go-sql-driver/mysql#dsn-data-source-name
-  "maxLifetime": 180,  //in seconds , ref: https://pkg.go.dev/database/sql#DB.SetConnMaxLifetime
-  "maxOpenConns": 10, //ref: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
-  "maxIdleConns": 1, //ref: https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
-  "ConnMaxIdleTime": 60, //in seconds ,  ref: https://pkg.go.dev/database/sql#DB.SetConnMaxIdleTime
-  "tableNamePrefix": "CADDY", //table prefix in mysql ,full table name should be CADDY_CONFIG
+  "connection_string": "postgres://user:password@localhost:5432/postgres?sslmode=disable"
+  "dbname": "caddyconfigadapter",
+  "host": "localhost",
+  "user": "postgres",
+  "password": "postgres",
+  "port": "5432",
+  "sslmode": "disable",
+  "disable_ddl": false,
+  "query_timeout": 120000000, //in nanoseconds
+  "lock_timeout": 120000000, //in nanoseconds
+  "tableNamePrefix": "CADDY", //table prefix in postgres ,full table name should be CADDY_CONFIG
   "refreshInterval": 3 //in seconds ,  auto check version in  CADDY_CONFIG table,reload caddy server if the version updated.
 }
 ```
 
-- table schema (it shoud be created atomically)
+- table schema (it should be created atomically)
 
 ![This is an image](./table.jpg)
 
@@ -58,15 +63,14 @@ caddy run --adapter mysql --config ./mysql.json
 
 ```SQL
 CREATE TABLE `CADDY_CONFIG` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `key` char(255) NOT NULL,
-  `value` longtext,
-  `enable` tinyint(1) NOT NULL DEFAULT '1',
-  `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `key` (`key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
+  `id` SERIAL PRIMARY KEY,
+  `key` VARCHAR(255) NOT NULL,
+  `value` TEXT,
+  `enable` BOOLEAN NOT NULL DEFAULT TRUE,
+  `created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated` tTIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS `CADDY_CONFIG_key_idx` ON `CADDY_CONFIG` (`key`);
 ```
 
 - table data should be
@@ -83,7 +87,7 @@ INSERT INTO `CADDY_CONFIG` (`id`,`key`,`value`,`enable`,`created`,`updated`) VAL
 
 ```
 
-- mysql rows data means
+- postgres rows data means
   - `key` == "version" when you have a row with `key` if the `value` changed or added , the caddyserver should reload configuration in refreshInterval
   - `key` == "config" you can store the caddy json config in value completely.
   - `key` == "admin" admin json value in https://caddyserver.com/docs/json/

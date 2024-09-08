@@ -1,10 +1,10 @@
-module github.com/zhangjiayin/caddy-mysql-adapter
+module github.com/fresent/caddy-postgres-adapter
 
 go 1.19
 
 require (
 	github.com/caddyserver/caddy/v2 v2.6.2
-	github.com/go-sql-driver/mysql v1.7.0
+	github.com/lib/pq v1.10.2
 )
 
 require (
@@ -29,6 +29,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
