@@ -341,20 +341,22 @@ func checkAndRefreshConfig(postgresAdapterConfig PostgresAdapterConfig) {
 }
 
 func runCheckLoop(postgresAdapterConfig PostgresAdapterConfig) {
-	ticker := time.NewTicker(time.Second * time.Duration(postgresAdapterConfig.RefreshInterval))
-	go func() {
+	done := make(chan bool)
+	go func(t time.Duration) {
+		tick := time.NewTicker(t).C
 		for {
 			select {
-			case <-ticker.C:
-				caddy.Log().Named("adapters.postgres.checkloop").Debug(fmt.Sprintf("Checking config version %s", config_version))
+			// t has passed, so id can be destroyed
+			case <-tick:
+				caddy.Log().Named("adapters.postgres.checkloop").Debug(fmt.Sprintf("version %s", config_version))
+				// We are finished destroying stuff
 				checkAndRefreshConfig(postgresAdapterConfig)
-			case <-caddy.Context().Done():
-				caddy.Log().Named("adapters.postgres.checkloop").Debug("Shutting down check loop")
-				ticker.Stop()
+			case <-done:
+				caddy.Log().Named("adapters.postgres.checkloop").Debug(fmt.Sprintf("destroying"))
 				return
 			}
 		}
-	}()
+	}(time.Second * time.Duration(postgresAdapterConfig.RefreshInterval))
 }
 
 var _ caddyconfig.Adapter = (*Adapter)(nil)
