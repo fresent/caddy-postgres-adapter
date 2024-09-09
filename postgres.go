@@ -35,6 +35,11 @@ type PostgresAdapterConfig struct {
 	TableNamePrefix  string        `json:"table_name_prefix,omitempty"`
 	RefreshInterval  int64         `json:"refresh_interval,omitempty"`
 }
+// CustomRoute extends caddyhttp.Route to include the @id field
+type CustomRoute struct {
+	caddyhttp.Route
+	ID string `json:"@id,omitempty"`
+}
 
 var (
 	dbs         []*sql.DB
@@ -47,6 +52,7 @@ CREATE TABLE IF NOT EXISTS %s (
 	id SERIAL PRIMARY KEY,
 	key VARCHAR(255) NOT NULL,
 	value TEXT,
+	route_id TEXT NULL,
 	enable BOOLEAN NOT NULL DEFAULT TRUE,
 	created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -59,6 +65,29 @@ var tableName = ""
 var config_version = "0"
 
 type Adapter struct{}
+
+// UnmarshalJSON custom unmarshaling for CustomRoute
+func (cr *CustomRoute) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		caddyhttp.Route
+		ID string `json:"@id,omitempty"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	cr.Route = temp.Route
+	cr.ID = temp.ID
+	return nil
+}
+// MarshalJSON custom marshaling for CustomRoute
+func (cr CustomRoute) MarshalJSON() ([]byte, error) {
+	type Alias CustomRoute
+	return json.Marshal(&struct {
+		*Alias
+	}{
+		Alias: (*Alias)(&cr),
+	})
+}
 
 func getDb(postgresAdapterConfig PostgresAdapterConfig) ([]*sql.DB, error) {
 	if len(dbs) > 0 {
@@ -245,13 +274,17 @@ func getConfiguration() ([]byte, error) {
 					return nil, fmt.Errorf("error getting routes for server %s: %w", serverKey, err)
 				}
 				if len(values) > 0 {
-					server.Routes = make([]caddyhttp.Route, 0, len(values))
+					//server.Routes = make([]caddyhttp.Route, 0, len(values))
+					server.Routes = make(caddyhttp.RouteList, 0, len(values))
 					for _, routeJSON := range values {
-						var route caddyhttp.Route
-						if err := json.Unmarshal([]byte(routeJSON), &route); err != nil {
+						//var route caddyhttp.Route
+						var customRoute CustomRoute
+						//if err := json.Unmarshal([]byte(routeJSON), &route); err != nil {
+						if err := json.Unmarshal([]byte(routeJSON), &customRoute); err != nil {
 							return nil, fmt.Errorf("error unmarshaling route for server %s: %w", serverKey, err)
 						}
-						server.Routes = append(server.Routes, route)
+						//server.Routes = append(server.Routes, route)
+						server.Routes = append(server.Routes, customRoute.Route)
 					}
 					httpApp.Servers[serverKey] = server
 					httpAppChanged = true
