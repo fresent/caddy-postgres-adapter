@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS %s (
 	route_id TEXT NULL,
 	destination TEXT NULL,
     enable INT2 NOT NULL DEFAULT 1,
-	created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS %s_key_idx ON %s (key);
 `
@@ -221,7 +221,7 @@ func executeQueryRow(query string, args ...interface{}) *sql.Row {
 
 func getValueFromDb(key string) (string, error) {
 	var value string
-	err := executeQueryRow("SELECT value FROM "+tableName+" WHERE key = $1 AND enable = 1 ORDER BY created DESC LIMIT 1", key).Scan(&value)
+	err := executeQueryRow("SELECT value FROM "+tableName+" WHERE key = $1 AND enable = 1 ORDER BY created_at DESC LIMIT 1", key).Scan(&value)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
@@ -232,7 +232,7 @@ func getValueFromDb(key string) (string, error) {
 }
 
 func getValuesFromDb(key string) ([]string, error) {
-	rows, err := executeQuery("SELECT value FROM "+tableName+" WHERE key = $1 AND enable = 1 ORDER BY created DESC", key)
+	rows, err := executeQuery("SELECT value FROM "+tableName+" WHERE key = $1 AND enable = 1 ORDER BY created_at DESC", key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query values for key %s: %w", key, err)
 	}
@@ -365,7 +365,7 @@ func getConfigVersion() string {
 	caddy.Log().Named("adapters.postgres.checkloop").Debug("getConfigVersion")
 
 	var version string
-	err := executeQueryRow("SELECT value FROM "+tableName+" WHERE key = 'version' AND enable = 1 ORDER BY created DESC LIMIT 1").Scan(&version)
+	err := executeQueryRow("SELECT value FROM "+tableName+" WHERE key = 'version' AND enable = 1 ORDER BY created_at DESC LIMIT 1").Scan(&version)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			caddy.Log().Named("adapters.postgres.load").Error(fmt.Sprintf("Error getting config version: %v", err))
