@@ -297,7 +297,7 @@ func getConfiguration() ([]byte, error) {
             }
 
 			httpAppChanged := false
-			for serverKey, server := range httpApp.Servers {
+			for serverKey, server := range customHTTPApp.Servers {
 				values, err := getValuesFromDb("config.apps.http.servers." + serverKey + ".routes")
 				if err != nil {
 					return nil, fmt.Errorf("error getting routes for server %s: %w", serverKey, err)
@@ -330,7 +330,7 @@ func getConfiguration() ([]byte, error) {
 				}
 			} */
 			if httpAppChanged {
-                var warnings []caddyconfig.Warning
+                //var warnings []caddyconfig.Warning
                 newHTTPAppConfig, err := json.Marshal(customHTTPApp)
                 if err != nil {
                     return nil, fmt.Errorf("error marshaling updated http app config: %w", err)
