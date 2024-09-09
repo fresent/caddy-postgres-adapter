@@ -57,7 +57,7 @@ caddy run --adapter postgres --config ./postgres.json
 
 - table schema (it should be created atomically)
 
-![This is an image](./table.jpg)
+![This is an image](./table_demo.jpg)
 
 - table DDL should like below
 

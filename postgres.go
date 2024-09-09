@@ -287,11 +287,7 @@ func getConfiguration() ([]byte, error) {
 
 	if config.AppsRaw != nil {
 		if httpAppConfig, ok := config.AppsRaw["http"]; ok {
-			//var httpApp caddyhttp.App
 			var customHTTPApp CustomHTTPApp
-			/* if err := json.Unmarshal(httpAppConfig, &httpApp); err != nil {
-				return nil, fmt.Errorf("error unmarshaling http app config: %w", err)
-			} */
 			if err := json.Unmarshal(httpAppConfig, &customHTTPApp); err != nil {
                 return nil, fmt.Errorf("error unmarshaling http app config: %w", err)
             }
@@ -303,34 +299,19 @@ func getConfiguration() ([]byte, error) {
 					return nil, fmt.Errorf("error getting routes for server %s: %w", serverKey, err)
 				}
 				if len(values) > 0 {
-					//server.Routes = make([]caddyhttp.Route, 0, len(values))
-					//server.Routes = make(caddyhttp.RouteList, 0, len(values))
 					server.Routes = make(CustomRouteList, 0, len(values))
 					for _, routeJSON := range values {
-						//var route caddyhttp.Route
 						var customRoute CustomRoute
-						//if err := json.Unmarshal([]byte(routeJSON), &route); err != nil {
 						if err := json.Unmarshal([]byte(routeJSON), &customRoute); err != nil {
 							return nil, fmt.Errorf("error unmarshaling route for server %s: %w", serverKey, err)
 						}
-						//server.Routes = append(server.Routes, route)
 						server.Routes = append(server.Routes, customRoute)
 					}
-					//httpApp.Servers[serverKey] = server
 					customHTTPApp.Servers[serverKey] = server
 					httpAppChanged = true
 				}
 			}
-
-			/* if httpAppChanged {
-				var warnings []caddyconfig.Warning
-				config.AppsRaw["http"] = caddyconfig.JSON(&httpApp, &warnings)
-				if len(warnings) > 0 {
-					caddy.Log().Named("adapters.postgres.config").Warn(fmt.Sprintf("warnings during JSON encoding of HTTP app: %v", warnings))
-				}
-			} */
 			if httpAppChanged {
-                //var warnings []caddyconfig.Warning
                 newHTTPAppConfig, err := json.Marshal(customHTTPApp)
                 if err != nil {
                     return nil, fmt.Errorf("error marshaling updated http app config: %w", err)
