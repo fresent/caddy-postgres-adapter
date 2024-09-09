@@ -260,11 +260,11 @@ func getConfiguration() ([]byte, error) {
 		target   interface{}
 		isRawMsg bool
 	}{
-		{"config", &config, false},
-		{"config.admin", &config.Admin, false},
-		{"config.logging", &config.Logging, false},
-		{"config.storage", &config.StorageRaw, true},
-		{"config.apps", &config.AppsRaw, true},
+		{"config", &config, 0},
+		{"config.admin", &config.Admin, 0},
+		{"config.logging", &config.Logging, 0},
+		{"config.storage", &config.StorageRaw, 1},
+		{"config.apps", &config.AppsRaw, 1},
 	}
 
 	for _, section := range configSections {
