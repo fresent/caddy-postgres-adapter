@@ -47,6 +47,10 @@ type CustomServer struct {
 	caddyhttp.Server
 	Routes CustomRouteList `json:"routes,omitempty"`
 }
+// CustomHTTPApp extends caddyhttp.App to use CustomServer
+type CustomHTTPApp struct {
+	Servers map[string]*CustomServer `json:"servers,omitempty"`
+}
 
 var (
 	dbs         []*sql.DB
@@ -94,6 +98,20 @@ func (cr CustomRoute) MarshalJSON() ([]byte, error) {
 	}{
 		Alias: (*Alias)(&cr),
 	})
+}
+// MarshalJSON custom marshaling for CustomRouteList
+func (crl CustomRouteList) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]CustomRoute(crl))
+}
+
+// UnmarshalJSON custom unmarshaling for CustomRouteList
+func (crl *CustomRouteList) UnmarshalJSON(data []byte) error {
+	var routes []CustomRoute
+	if err := json.Unmarshal(data, &routes); err != nil {
+		return err
+	}
+	*crl = routes
+	return nil
 }
 
 func getDb(postgresAdapterConfig PostgresAdapterConfig) ([]*sql.DB, error) {
@@ -270,12 +288,13 @@ func getConfiguration() ([]byte, error) {
 	if config.AppsRaw != nil {
 		if httpAppConfig, ok := config.AppsRaw["http"]; ok {
 			//var httpApp caddyhttp.App
-			var httpApp struct {
-                Servers map[string]CustomServer `json:"servers"`
-            }
-			if err := json.Unmarshal(httpAppConfig, &httpApp); err != nil {
+			var customHTTPApp CustomHTTPApp
+			/* if err := json.Unmarshal(httpAppConfig, &httpApp); err != nil {
 				return nil, fmt.Errorf("error unmarshaling http app config: %w", err)
-			}
+			} */
+			if err := json.Unmarshal(httpAppConfig, &customHTTPApp); err != nil {
+                return nil, fmt.Errorf("error unmarshaling http app config: %w", err)
+            }
 
 			httpAppChanged := false
 			for serverKey, server := range httpApp.Servers {
@@ -297,7 +316,8 @@ func getConfiguration() ([]byte, error) {
 						//server.Routes = append(server.Routes, route)
 						server.Routes = append(server.Routes, customRoute)
 					}
-					httpApp.Servers[serverKey] = server
+					//httpApp.Servers[serverKey] = server
+					customHTTPApp.Servers[serverKey] = server
 					httpAppChanged = true
 				}
 			}
@@ -311,7 +331,7 @@ func getConfiguration() ([]byte, error) {
 			} */
 			if httpAppChanged {
                 var warnings []caddyconfig.Warning
-                newHTTPAppConfig, err := json.Marshal(httpApp)
+                newHTTPAppConfig, err := json.Marshal(customHTTPApp)
                 if err != nil {
                     return nil, fmt.Errorf("error marshaling updated http app config: %w", err)
                 }
