@@ -335,7 +335,7 @@ func getConfiguration() ([]byte, error) {
                 if err != nil {
                     return nil, fmt.Errorf("error marshaling updated http app config: %w", err)
                 }
-                caddy.Log().Named("adapters.postgres.config").Error(fmt.Sprintf("Test %s", customHTTPApp))
+                caddy.Log().Named("adapters.postgres.config").Error(fmt.Sprintf("Testing %s", customHTTPApp))
                 config.AppsRaw["http"] = newHTTPAppConfig
             }
 		}
