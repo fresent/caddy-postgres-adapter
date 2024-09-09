@@ -40,6 +40,13 @@ type CustomRoute struct {
 	caddyhttp.Route
 	ID string `json:"@id,omitempty"`
 }
+// CustomRouteList is a list of CustomRoutes
+type CustomRouteList []CustomRoute
+// CustomServer extends caddyhttp.Server to use CustomRouteList
+type CustomServer struct {
+	caddyhttp.Server
+	Routes CustomRouteList `json:"routes,omitempty"`
+}
 
 var (
 	dbs         []*sql.DB
@@ -262,7 +269,10 @@ func getConfiguration() ([]byte, error) {
 
 	if config.AppsRaw != nil {
 		if httpAppConfig, ok := config.AppsRaw["http"]; ok {
-			var httpApp caddyhttp.App
+			//var httpApp caddyhttp.App
+			var httpApp struct {
+                Servers map[string]CustomServer `json:"servers"`
+            }
 			if err := json.Unmarshal(httpAppConfig, &httpApp); err != nil {
 				return nil, fmt.Errorf("error unmarshaling http app config: %w", err)
 			}
@@ -275,7 +285,8 @@ func getConfiguration() ([]byte, error) {
 				}
 				if len(values) > 0 {
 					//server.Routes = make([]caddyhttp.Route, 0, len(values))
-					server.Routes = make(caddyhttp.RouteList, 0, len(values))
+					//server.Routes = make(caddyhttp.RouteList, 0, len(values))
+					server.Routes = make(CustomRouteList, 0, len(values))
 					for _, routeJSON := range values {
 						//var route caddyhttp.Route
 						var customRoute CustomRoute
@@ -284,20 +295,28 @@ func getConfiguration() ([]byte, error) {
 							return nil, fmt.Errorf("error unmarshaling route for server %s: %w", serverKey, err)
 						}
 						//server.Routes = append(server.Routes, route)
-						server.Routes = append(server.Routes, customRoute.Route)
+						server.Routes = append(server.Routes, customRoute)
 					}
 					httpApp.Servers[serverKey] = server
 					httpAppChanged = true
 				}
 			}
 
-			if httpAppChanged {
+			/* if httpAppChanged {
 				var warnings []caddyconfig.Warning
 				config.AppsRaw["http"] = caddyconfig.JSON(&httpApp, &warnings)
 				if len(warnings) > 0 {
 					caddy.Log().Named("adapters.postgres.config").Warn(fmt.Sprintf("warnings during JSON encoding of HTTP app: %v", warnings))
 				}
-			}
+			} */
+			if httpAppChanged {
+                var warnings []caddyconfig.Warning
+                newHTTPAppConfig, err := json.Marshal(httpApp)
+                if err != nil {
+                    return nil, fmt.Errorf("error marshaling updated http app config: %w", err)
+                }
+                config.AppsRaw["http"] = newHTTPAppConfig
+            }
 		}
 	}
 
